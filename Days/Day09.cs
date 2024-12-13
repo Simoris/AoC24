@@ -14,53 +14,11 @@ public class Day09(ITestOutputHelper testOutputHelper)
         return lines.First().ToCharArray().Select(x => int.Parse(x.ToString())).ToArray();
     }
 
-    [Fact]
-    public void Part1()
-    {
-        var map = LoadData();
-        var memory = GenerateMemory(map);
-        memory = Compact(memory);
-        var checksum = CheckSum(memory);
-        _testOutputHelper.WriteLine(checksum);
-    }
-
-    private static int[] GenerateMemory(int[] map)
-    {
-        List<int> result = [];
-        var isFree = false;
-        var id = 0;
-        foreach (var i in map)
-        {
-            var value = isFree ? -1 : id++;
-            result.AddRange(Enumerable.Range(0, i).Select(_ => value));
-            isFree = !isFree;
-        }
-
-        return result.ToArray();
-    }
-
-    private static int[] Compact(int[] map)
-    {
-        while (true)
-        {
-            var firstFree = map.Index().FirstOrDefault(x => x.Item == -1, (Index: -1, Item: -1)).Index;
-            if (firstFree == -1)
-                return map;
-            var lastFilled = map.Index().LastOrDefault(x => x.Item != -1, (Index: -1, Item: -1));
-            if (firstFree > lastFilled.Index)
-                return map;
-            map[firstFree] = lastFilled.Item;
-            map[lastFilled.Index] = -1;
-        }
-    }
-
-    private static long CheckSum(int[] map)
-        => map.Index().Select(x => (long)(x.Item != -1 ? x.Item * x.Index : 0)).Sum();
-
     private record Memory(int Size, int? Id)
     {
         public bool Filled => Id.HasValue;
     }
+
     [Fact]
     public void Part2()
     {
@@ -71,15 +29,27 @@ public class Day09(ITestOutputHelper testOutputHelper)
         _testOutputHelper.WriteLine(checksum);
     }
 
+    [Fact]
+    public void Part1()
+    {
+        var map = LoadData();
+        var memory = ToMemory(map);
+        memory = CompactFragment(memory.ToList());
+        var checksum = CheckSum(memory);
+        _testOutputHelper.WriteLine(checksum);
+    }
+
     private static Memory[] ToMemory(int[] map)
         => map.Index().Select(x => new Memory(x.Item, x.Index % 2 == 0 ? x.Index / 2 : null)).ToArray();
 
     private static Memory[] Compact(List<Memory> memory)
     {
-        for (var i = memory.Count() - 1; i >= 0; i--)
+        for (var i = memory.Count - 1; i >= 0; i--)
         {
             if (!memory[i].Filled)
                 continue;
+
+            //OPTIMIZATION: don't search empties again and again, index first
             var space = memory
                 .Index()
                 .FirstOrDefault(x => !x.Item.Filled && x.Item.Size >= memory[i].Size, (Index: -1, Item: new Memory(0, 0)));
@@ -103,6 +73,41 @@ public class Day09(ITestOutputHelper testOutputHelper)
         return memory.ToArray();
     }
 
+    private static Memory[] CompactFragment(List<Memory> memory)
+    {
+        var freeIndex = 0;
+        for (var i = memory.Count - 1; i >= 0; i--)
+        {
+            if (!memory[i].Filled)
+                continue;
+            while (memory[freeIndex].Filled) freeIndex++;
+
+            if (freeIndex > i)
+                break;
+            if (memory[freeIndex].Size == memory[i].Size)
+            {
+                memory[freeIndex] = memory[i];
+                memory[i] = memory[i] with { Id = null };
+            }
+            else if (memory[freeIndex].Size > memory[i].Size)
+            {
+                var oldSize = memory[freeIndex].Size;
+                memory[freeIndex] = memory[i];
+                memory[i] = memory[i] with { Id = null };
+                memory.Insert(freeIndex + 1, new Memory(oldSize - memory[i].Size, null));
+                i++;
+            }
+            else
+            {
+                memory[freeIndex] = memory[freeIndex] with { Id = memory[i].Id };
+                memory[i] = memory[i] with { Size = memory[i].Size - memory[freeIndex].Size };
+                memory.Insert(i + 1, new Memory(memory[freeIndex].Size, null));
+                i++;
+            }
+        }
+        return memory.ToArray();
+    }
+
     private static long CheckSum(Memory[] memory)
     {
         List<int> expandedMemory = [];
@@ -110,5 +115,6 @@ public class Day09(ITestOutputHelper testOutputHelper)
             expandedMemory.AddRange(Enumerable.Range(0, mem.Size).Select(x => mem.Id ?? -1));
         return CheckSum(expandedMemory.ToArray());
     }
-
+    private static long CheckSum(int[] map)
+        => map.Index().Select(x => (long)(x.Item != -1 ? x.Item * x.Index : 0)).Sum();
 }

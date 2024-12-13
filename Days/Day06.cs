@@ -24,6 +24,13 @@ public class Day06(ITestOutputHelper testOutputHelper)
         var start = new Coordinate(row.Index, col);
         var direction = new Coordinate(-1, 0);
 
+        grid = WalkOut(grid, start, direction);
+
+        _testOutputHelper.WriteLine(grid.Sum(x => x.Count(y => y == 'X')));
+    }
+
+    private static char[][] WalkOut(char[][] grid, Coordinate start, Coordinate direction)
+    {
         try
         {
             while (true)
@@ -33,12 +40,11 @@ public class Day06(ITestOutputHelper testOutputHelper)
                 {
                     direction = direction.Turn90();
                 }
-                start = start + direction;
+                start += direction;
             }
         }
         catch (IndexOutOfRangeException) { }
-
-        _testOutputHelper.WriteLine(grid.Sum(x => x.Count(y => y == 'X')));
+        return grid;
     }
 
     private void PrintGrid(char[][] grid, Action<string> print = null)
@@ -59,21 +65,22 @@ public class Day06(ITestOutputHelper testOutputHelper)
         grid.SetAtIndex(start, '.');
         var direction = new Coordinate(-1, 0);
 
+        var walkWay = WalkOut(grid.Select(x => x.ToArray()).ToArray(), start, direction);
+        var positions = walkWay.FindAll('X');
+
         var count = 0;
-        for (var i = 0; i < grid.Length; i++)
-            for (var j = 0; j < grid[0].Length; j++)
-            {
-                if (grid[i][j] != '.' || start.Equals(new Coordinate(i, j)))
-                    continue;
-                grid[i][j] = '#';
-                if (FindLoop(grid, start, direction))
-                    count++;
-                grid[i][j] = '.';
-            }
+        foreach (var position in positions.Where(x => grid.Index(x) == '.' && start != x))
+        {
+            grid.SetAtIndex(position, '#');
+            if (FindLoop(grid, start, direction))
+                count++;
+            grid.SetAtIndex(position, '.');
+        }
+
         _testOutputHelper.WriteLine(count);
     }
 
-    private bool FindLoop(char[][] grid, Coordinate start, Coordinate direction)
+    private static bool FindLoop(char[][] grid, Coordinate start, Coordinate direction)
     {
         try
         {

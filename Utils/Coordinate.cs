@@ -2,6 +2,8 @@ namespace AoC24.Utils;
 
 public readonly record struct Coordinate(int X, int Y)
 {
+    public Coordinate((int X, int Y) tuple) : this(tuple.X, tuple.Y) { }
+
     public static Coordinate operator +(Coordinate a, Coordinate b)
         => new(a.X + b.X, a.Y + b.Y);
     public static Coordinate operator -(Coordinate a, Coordinate b)
@@ -15,6 +17,9 @@ public readonly record struct Coordinate(int X, int Y)
 
     public Coordinate Turn270()
         => new(-Y, X);
+
+    public bool Borders(Coordinate other)
+        => Math.Abs(other.X - X) + Math.Abs(other.Y - Y) == 1;
 }
 
 public static class ArrayExtensions
