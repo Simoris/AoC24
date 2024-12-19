@@ -8,6 +8,8 @@ public readonly record struct Coordinate(int X, int Y)
         => new(a.X + b.X, a.Y + b.Y);
     public static Coordinate operator -(Coordinate a, Coordinate b)
         => new(a.X - b.X, a.Y - b.Y);
+    public static Coordinate operator %(Coordinate a, Coordinate b)
+        => new((a.X + b.X) % b.X, (a.Y + b.Y) % b.Y);
 
     public Coordinate Flip()
         => new(-X, -Y);
